@@ -1,10 +1,8 @@
 /*******************************************
 * Group Name  : XXXXXX
-
 * Member1 Name: XXXXXX
 * Member1 SIS ID: XXXXXX
 * Member1 Login ID: XXXXXX
-
 * Member2 Name: XXXXXX
 * Member2 SIS ID: XXXXXX
 * Member2 Login ID: XXXXXX
@@ -18,6 +16,12 @@
 #include <iostream>
 #include <vector>
 #include <stdlib.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 
 using namespace std;
 
@@ -25,68 +29,105 @@ int main(int argc, char* argv[]){
   
   int opt;
   vector<char> flags;
-  int port;
+  string port;
   string ip_address;
   
-  while((opt = getopt(argc, argv, "+hp:s:")) != 1){
-  	switch(opt){
-      		case 'p':
-        		for (char c : flags){
-				if(c == 'p'){
-					cerr << argv[0] << ": Error: -p was already called" << "\n";
-					exit(1);
-		 		}
-       			}
-       			flags.push_back('p');
-        		port = optarg;
-        		break;
-      		case 's':
-        		for (char c : flags){
-				if(c == 's'){
-					cerr << argv[0] << ": Error: -s was already called" << "\n";
-					exit(1);
-				}
-        		}
-        		flags.push_back('s');
-        		ip_address = optarg;
-        		break;
-			
-		case 'h':
-			cout << argv[0] << ": Usage: -s '[IP Address]' | -p '[Port Number]' | -h Help";
-			exit(1);
-			break;
-		default:
-			cerr < argv[0] << ": Invalid Flag - Usage: -s '[IP Address]' | -p '[Port Number]' | -h Help";
-	
-    	}
-  }
+if(argc == 5 || argc == 2){ // Check to see if there is args. If there is not, then it means it is the server
 
-  if (argc == 1){ // No args passed, this is the server
-    // Find the IP, pick a Port, output both. 
-    // Create a socket with that info. 
+    /****************************************************************
+    *                         Client                                *
+    ****************************************************************/
 
-    while (true){ // Loop on inputs forever. 
-      // Wait for message
-      // Get port/IP from message (or bind to socket?)
-      // Get user input
-      // Send via port/IP
+    while((opt = getopt(argc,argv,"hp:s:")) != -1){
+        switch(opt){
+                case 'p':{
+                    for (char c : flags){
+                        if(c == 'p'){
+                            cerr << argv[0] << ": Error: -p was already called" << "\n";
+                            exit(1);
+                        }
+                    }
+                    flags.push_back('p');
+                    port = optarg;
+                    break;
+                }
+                case 's':{
+                    for (char c : flags){
+                        if(c == 's'){
+                            cerr << argv[0] << ": Error: -s was already called" << "\n";
+                            exit(1);
+                        }
+                    }
+                    flags.push_back('s');
+                    ip_address = optarg;
+                    break;
+                }
+            case 'h':{
+                cout << argv[0] << ": Usage: -s '[IP Address]' | -p '[Port Number]' | -h Help |\n";
+                exit(1);
+                break;
+            }
+            default:
+                cerr << argv[0] << ": Invalid Flag - Usage: -s '[IP Address]' | -p '[Port Number]' | -h Help\n";
+                break;
+                exit(1);
+            }
     }
-  }
-  else if (argc == 3){ // Args were passed, this is the client
-    // Port and IP should be arguements, take from those. 
-      // Check flags to find arguements.
-      // End if the args are incorrect
 
-    // Bind the socket to the IP and Port
+    cout << ip_address << " " << port << "\n";
 
-    while (true){
-      // Get user input
-      // Send through socket
-      // Wait for reply
+  }else if (argc == 0){
+    /****************************************************************
+    *                         Server                               *
+    ****************************************************************/
+ }else{
+  // Bad Number of args
+ }
+  
+
+struct Packet{
+  uint16_t packetVersion;
+  uint16_t packetLength;
+  string message;
+}
+
+void sendMessage(int processSocket){
+  string message;
+  do{
+    cout << "You: ";
+    getline(cin, message);
+    if (message.length() > 140){
+      cout << "Message limited to 140 characters.\n";
     }
+  }while(message.length() > 140);
+
+  // Send via socket
+  Packet packet{};
+  packet.packetVersion = htons(457);
+  packet.packetLength = htons(message.length());
+  packet.message = message;
+
+  send(processSocket, &mesage, sizeof(packet), 0);
+}
+
+
+void receiveMessage(){
+
+}
+
+
+void serverProcess(){
+  while (true){ // Loop on inputs forever. 
+    getMessage();
+    sendMessage();
   }
-  
-  
-  // Incorrect number of args
-  return 0;
+}
+
+
+void clientProcess(){
+  while (true){
+    sendMessage();
+    getMessage();
+  }
+}return 0;
 }
