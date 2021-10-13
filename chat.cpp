@@ -1,14 +1,14 @@
-/*******************************************
-* Group Name  : XXXXXX
-
-* Member1 Name: XXXXXX
-* Member1 SIS ID: XXXXXX
-* Member1 Login ID: XXXXXX
-
-* Member2 Name: XXXXXX
-* Member2 SIS ID: XXXXXX
-* Member2 Login ID: XXXXXX
-********************************************/
+/**************************************
+ * Group Name  : XXXXXX               *
+ *                                    *
+ * Member1 Name: XXXXXX               *
+ * Member1 SIS ID: XXXXXX             *
+ * Member1 Login ID: XXXXXX           *
+ *                                    *
+ * Member2 Name: XXXXXX               *
+ * Member2 SIS ID: XXXXXX             *
+ * Member2 Login ID: XXXXXX           *
+ **************************************/
 
 // https://www.geeksforgeeks.org/socket-programming-cc/ (USEFUL RESOURCE)
 
@@ -44,8 +44,8 @@ int main(int argc, char* argv[]){
   if (argc == 1){  
 
     /*********************************************
-    *                 Server                     *
-    *********************************************/ 
+     *                 Server                    *
+     *********************************************/ 
     
     struct addrinfo *self;
     struct addrinfo hints{};
@@ -95,11 +95,11 @@ int main(int argc, char* argv[]){
     serverProcess(serverSocket);
   }
   
-  else if (argc == 5 || argc == 2){ 
+  else if (argc == 5 || argc == 2 || argc == 3){ 
 
     /*********************************************
-    *                 Client                     *
-    *********************************************/ 
+     *                 Client                    *
+     *********************************************/ 
 
     while((opt = getopt(argc, argv, "hp:s:")) != -1){
       switch(opt){
@@ -133,6 +133,8 @@ int main(int argc, char* argv[]){
       }
     }
 
+    cout << "Welcome to Chat!\nConnecting to server...\n";
+
     struct addrinfo hints{};
     struct addrinfo *server;
     hints.ai_family = AF_UNSPEC;
@@ -147,6 +149,8 @@ int main(int argc, char* argv[]){
 
     connect(newSocket, server->ai_addr, server->ai_addrlen);
 
+    cout << "Connected!\nConnected to a friend! Your send first.\n";
+
     clientProcess(newSocket);
   }
 }
@@ -154,7 +158,7 @@ int main(int argc, char* argv[]){
 struct Packet{
   uint16_t packetVersion;
   uint16_t packetLength;
-  string message;
+  char message[140];
 };
 
 
@@ -172,10 +176,11 @@ void sendMessage(int processSocket){
   Packet packet{};
   packet.packetVersion = htons(457);
   packet.packetLength = htons(message.length());
-  packet.message = message;
+  //packet.message = message;
 
-  int sent = send(processSocket, &packet, sizeof(packet), 0);
-  cout << sent << endl;
+  memcpy(packet.message, message.c_str(), message.length());
+
+  send(processSocket, &packet, sizeof(packet), 0);
 }
 
 
@@ -189,12 +194,12 @@ void receiveMessage(int processSocket){
   }
   packet.packetLength = ntohs(packet.packetLength);
 
-  cout << "Friend: " << packet.message << endl;
+  cout << "Friend: " << string(packet.message,packet.packetLength) << endl;
 }
 
 
 void serverProcess(int serverSocket){
-  while (true){ // Loop on inputs forever. 
+  while (true){
     receiveMessage(serverSocket);
     sendMessage(serverSocket);
   }
