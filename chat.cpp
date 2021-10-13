@@ -12,18 +12,21 @@
 
 #include <unistd.h>
 #include <utility>      
-#include <string>       
+#include <string>  
 #include <iostream>
 #include <vector>
 #include <stdlib.h>
-#include <unistd.h>
-#include <stdint.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 using namespace std;
+
+void sendMessage(int processSocket);
+void receiveMessage(int processSocket);
+void serverProcess(int serverSocket);
+void clientProcess(int clientSocket);
 
 int main(int argc, char* argv[]){
   
@@ -32,64 +35,122 @@ int main(int argc, char* argv[]){
   string port;
   string ip_address;
   
-if(argc == 5 || argc == 2){ // Check to see if there is args. If there is not, then it means it is the server
+  
 
-    /****************************************************************
-    *                         Client                                *
-    ****************************************************************/
+  if (argc == 1){ // No args passed, this is the server
+    // Find the IP, pick a Port, output both. 
+    // Create a socket with that info. 
 
-    while((opt = getopt(argc,argv,"hp:s:")) != -1){
-        switch(opt){
-                case 'p':{
-                    for (char c : flags){
-                        if(c == 'p'){
-                            cerr << argv[0] << ": Error: -p was already called" << "\n";
-                            exit(1);
-                        }
-                    }
-                    flags.push_back('p');
-                    port = optarg;
-                    break;
-                }
-                case 's':{
-                    for (char c : flags){
-                        if(c == 's'){
-                            cerr << argv[0] << ": Error: -s was already called" << "\n";
-                            exit(1);
-                        }
-                    }
-                    flags.push_back('s');
-                    ip_address = optarg;
-                    break;
-                }
-            case 'h':{
-                cout << argv[0] << ": Usage: -s '[IP Address]' | -p '[Port Number]' | -h Help |\n";
-                exit(1);
-                break;
-            }
-            default:
-                cerr << argv[0] << ": Invalid Flag - Usage: -s '[IP Address]' | -p '[Port Number]' | -h Help\n";
-                break;
-                exit(1);
-            }
+    /*********************************************
+    *                 Server                     *
+    *********************************************/ 
+
+    
+    struct addrinfo *self;
+    struct addrinfo hints{};
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+    struct addrinfo *result;
+    
+    int success = getaddrinfo(NULL, "3333", &hints, &result);//What port do you want to use?
+    if (success != 0){
+      cerr << "server failure";
     }
 
-    cout << ip_address << " " << port << "\n";
+    self = result;
+    char host[256];
+    string ipAddress;
 
-  }else if (argc == 0){
-    /****************************************************************
-    *                         Server                               *
-    ****************************************************************/
- }else{
-  // Bad Number of args
- }
+    gethostname(host, 256);
+    struct hostent *hostIP = gethostbyname(host);
+    ipAddress = inet_ntoa(*((struct in_addr*) hostIP->h_addr_list[0]));
   
+    cout << "Welcome to chat!\nWaiting for a connection on ";
+    cout << ipAddress;
+    cout << " port 3333" << endl;
+
+    
+
+    int newSocket = socket(self->ai_family, self->ai_socktype, self->ai_protocol);
+    if (newSocket == -1){
+      cerr << "Socket could not be created";
+    }
+
+    int listenSuccess = listen(newSocket, 20);
+    if (listenSuccess == -1){
+      cerr << "socket failed to listen";
+    }
+
+    struct sockaddr clientAddr{};
+    socklen_t addressLength;
+    int serverSocket = accept(newSocket, &clientAddr, &addressLength);
+
+
+    cout << "Found a friend! You receive first.\n";
+
+    serverProcess(serverSocket);
+  }
+  
+  else if (argc == 5 || argc == 2){ 
+
+    /*********************************************
+    *                 Client                     *
+    *********************************************/ 
+
+    while((opt = getopt(argc, argv, "hp:s:")) != -1){
+      switch(opt){
+        case 'p' : {
+          for (char c : flags){
+            if(c == 'p'){
+              cerr << argv[0] << ": Error: -p was already called" << "\n";
+              exit(1);
+            }
+          }
+          flags.push_back('p');
+          port = optarg;
+          break;
+        }case 's' : {
+          for (char c : flags){
+            if(c == 's'){
+              cerr << argv[0] << ": Error: -s was already called" << "\n";
+              exit(1);
+            }
+          }
+          flags.push_back('s');
+          ip_address = optarg;
+          break;
+        }case 'h' : {
+          cout << argv[0] << ": Usage: -s '[IP Address]' | -p '[Port Number]' | -h Help";
+          exit(1);
+          break;
+        }default : {
+          cerr << argv[0] << ": Invalid Flag - Usage: -s '[IP Address]' | -p '[Port Number]' | -h Help";
+        }
+      }
+    }
+
+    struct addrinfo hints{};
+    struct addrinfo *server;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    getaddrinfo(ip_address.c_str(), port.c_str(), &hints, &server);
+    // Bind the socket to the IP and Port
+    int newSocket = socket(server->ai_family, server->ai_socktype, server->ai_protocol);
+    if (newSocket == -1){
+      cerr << "Socket could not be created";
+    }
+    clientProcess(newSocket);
+  }
+}
 
 struct Packet{
   uint16_t packetVersion;
   uint16_t packetLength;
   string message;
-}
+};
+
 
 void sendMessage(int processSocket){
   string message;
@@ -107,27 +168,35 @@ void sendMessage(int processSocket){
   packet.packetLength = htons(message.length());
   packet.message = message;
 
-  send(processSocket, &mesage, sizeof(packet), 0);
+  send(processSocket, &message, sizeof(packet), 0);
 }
 
 
-void receiveMessage(){
+void receiveMessage(int processSocket){
+  Packet packet{};
+  int receivedBytes = recv(processSocket, &packet, sizeof(packet), 0);
+  if (receivedBytes == 0){
+    cout << "Your friend left. Disconnecting.\n";
+    close(processSocket);
+    cerr << "Friend has left the chat.";
+  }
+  packet.packetLength = ntohs(packet.packetLength);
 
+  cout << "Friend: " << string(packet.message, packet.packetLength) << "\n";
 }
 
 
-void serverProcess(){
+void serverProcess(int serverSocket){
   while (true){ // Loop on inputs forever. 
-    getMessage();
-    sendMessage();
+    receiveMessage(serverSocket);
+    sendMessage(serverSocket);
   }
 }
 
 
-void clientProcess(){
+void clientProcess(int clientSocket){
   while (true){
-    sendMessage();
-    getMessage();
+    sendMessage(clientSocket);
+    receiveMessage(clientSocket);
   }
-}return 0;
 }
