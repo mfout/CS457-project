@@ -5,9 +5,9 @@
  * Member1 SIS ID: 831209541          *
  * Member1 Login ID: ccluett          *
  *                                    *
- * Member2 Name: XXXXXX               *
- * Member2 SIS ID: XXXXXX             *
- * Member2 Login ID: XXXXXX           *
+ * Member2 Name: Mason Fout           *
+ * Member2 SIS ID: 831378374          *
+ * Member2 Login ID: mfout            *
  **************************************/
 
 // https://www.geeksforgeeks.org/socket-programming-cc/ (USEFUL RESOURCE)
