@@ -1,8 +1,10 @@
 /*******************************************
 * Group Name  : XXXXXX
+
 * Member1 Name: XXXXXX
 * Member1 SIS ID: XXXXXX
 * Member1 Login ID: XXXXXX
+
 * Member2 Name: XXXXXX
 * Member2 SIS ID: XXXXXX
 * Member2 Login ID: XXXXXX
@@ -20,6 +22,8 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <stdio.h>
+#include <cstring>
 
 using namespace std;
 
@@ -37,14 +41,11 @@ int main(int argc, char* argv[]){
   
   
 
-  if (argc == 1){ // No args passed, this is the server
-    // Find the IP, pick a Port, output both. 
-    // Create a socket with that info. 
+  if (argc == 1){  
 
     /*********************************************
     *                 Server                     *
     *********************************************/ 
-
     
     struct addrinfo *self;
     struct addrinfo hints{};
@@ -53,7 +54,7 @@ int main(int argc, char* argv[]){
     hints.ai_flags = AI_PASSIVE;
     struct addrinfo *result;
     
-    int success = getaddrinfo(NULL, "3333", &hints, &result);//What port do you want to use?
+    int success = getaddrinfo(NULL, "3333", &hints, &result);
     if (success != 0){
       cerr << "server failure";
     }
@@ -76,6 +77,8 @@ int main(int argc, char* argv[]){
     if (newSocket == -1){
       cerr << "Socket could not be created";
     }
+
+    bind(newSocket, self->ai_addr, self->ai_addrlen);
 
     int listenSuccess = listen(newSocket, 20);
     if (listenSuccess == -1){
@@ -141,6 +144,9 @@ int main(int argc, char* argv[]){
     if (newSocket == -1){
       cerr << "Socket could not be created";
     }
+
+    connect(newSocket, server->ai_addr, server->ai_addrlen);
+
     clientProcess(newSocket);
   }
 }
@@ -168,7 +174,8 @@ void sendMessage(int processSocket){
   packet.packetLength = htons(message.length());
   packet.message = message;
 
-  send(processSocket, &message, sizeof(packet), 0);
+  int sent = send(processSocket, &packet, sizeof(packet), 0);
+  cout << sent << endl;
 }
 
 
@@ -178,11 +185,11 @@ void receiveMessage(int processSocket){
   if (receivedBytes == 0){
     cout << "Your friend left. Disconnecting.\n";
     close(processSocket);
-    cerr << "Friend has left the chat.";
+    cerr << "Friend has left the chat. \n";
   }
   packet.packetLength = ntohs(packet.packetLength);
 
-  cout << "Friend: " << string(packet.message, packet.packetLength) << "\n";
+  cout << "Friend: " << packet.message << endl;
 }
 
 
