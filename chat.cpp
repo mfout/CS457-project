@@ -24,6 +24,7 @@
 #include <sys/socket.h>
 #include <stdio.h>
 #include <cstring>
+#include <regex>
 
 using namespace std;
 
@@ -133,6 +134,9 @@ int main(int argc, char* argv[]){
       }
     }
 
+    validPort(port);
+    validdIP(ip_address);
+    
     cout << "Welcome to Chat!\nConnecting to server...\n";
 
     struct addrinfo hints{};
@@ -211,4 +215,32 @@ void clientProcess(int clientSocket){
     sendMessage(clientSocket);
     receiveMessage(clientSocket);
   }
+}
+
+void validIP(string host) {
+    regex pattern(R"((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3}))");
+    smatch IP;
+
+    bool validIP = regex_match(host, IP, pattern);
+
+    if (!validIP) {
+      cerr << "Invalid IP address.";
+      exit(1);
+    }
+
+    for (auto it = IP.begin() + 1; it != IP.end(); it++) {
+        int octet = stoi(it->str());
+        if (octet > 255 || octet < 0) {
+          cerr << "Invalid IP address";
+          exit(1);
+        }
+    }
+}
+
+void validPort(string port) {
+    port = stoi(port);
+    if (port > 65536 || port < 0){
+         cerr << "Invalid port";
+         exit(1);
+    }
 }
