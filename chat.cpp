@@ -32,6 +32,8 @@ void sendMessage(int processSocket);
 void receiveMessage(int processSocket);
 void serverProcess(int serverSocket);
 void clientProcess(int clientSocket);
+void validPort(const string &port);
+void validIP(const string &host);
 
 int main(int argc, char* argv[]){
   
@@ -58,6 +60,7 @@ int main(int argc, char* argv[]){
     int success = getaddrinfo(NULL, "3333", &hints, &result);
     if (success != 0){
       cerr << "server failure";
+      exit(1);
     }
 
     self = result;
@@ -77,19 +80,30 @@ int main(int argc, char* argv[]){
     int newSocket = socket(self->ai_family, self->ai_socktype, self->ai_protocol);
     if (newSocket == -1){
       cerr << "Socket could not be created";
+      exit(1);
     }
 
-    bind(newSocket, self->ai_addr, self->ai_addrlen);
+    int bindSuccess = bind(newSocket, self->ai_addr, self->ai_addrlen);
+
+    if (bindSuccess == -1){
+      cerr << "Binding failed";
+      exit(1);
+    }
 
     int listenSuccess = listen(newSocket, 20);
     if (listenSuccess == -1){
       cerr << "socket failed to listen";
+      exit(1);
     }
 
     struct sockaddr clientAddr{};
     socklen_t addressLength;
     int serverSocket = accept(newSocket, &clientAddr, &addressLength);
 
+    if (serverSocket == -1){
+      cerr << "Failed to Accept";
+      exit(1);
+    }
 
     cout << "Found a friend! You receive first.\n";
 
@@ -135,10 +149,8 @@ int main(int argc, char* argv[]){
     }
 
     validPort(port);
-    validdIP(ip_address);
-    
-    cout << "Welcome to Chat!\nConnecting to server...\n";
-
+    validIP(ip_address);
+  
     struct addrinfo hints{};
     struct addrinfo *server;
     hints.ai_family = AF_UNSPEC;
@@ -149,9 +161,16 @@ int main(int argc, char* argv[]){
     int newSocket = socket(server->ai_family, server->ai_socktype, server->ai_protocol);
     if (newSocket == -1){
       cerr << "Socket could not be created";
+      exit(1);
     }
 
-    connect(newSocket, server->ai_addr, server->ai_addrlen);
+    cout << "Welcome to Chat!\nConnecting to server...\n";
+
+    int newConnect = connect(newSocket, server->ai_addr, server->ai_addrlen);
+    if(newConnect == -1){
+      cerr << "Could not connect to server\n";
+      exit(1);
+    }
 
     cout << "Connected!\nConnected to a friend! Your send first.\n";
 
@@ -217,30 +236,30 @@ void clientProcess(int clientSocket){
   }
 }
 
-void validIP(string host) {
+void validIP(const string &host) {
     regex pattern(R"((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3}))");
     smatch IP;
 
     bool validIP = regex_match(host, IP, pattern);
 
     if (!validIP) {
-      cerr << "Invalid IP address.";
+      cerr << "Invalid IP address.\n";
       exit(1);
     }
 
-    for (auto it = IP.begin() + 1; it != IP.end(); it++) {
-        int octet = stoi(it->str());
+    for (int i = 1; i <= 4; i++) {
+        int octet = stoi(IP[i]);
         if (octet > 255 || octet < 0) {
-          cerr << "Invalid IP address";
+          cerr << "Invalid IP address\n";
           exit(1);
         }
     }
 }
 
-void validPort(string port) {
-    port = stoi(port);
-    if (port > 65536 || port < 0){
-         cerr << "Invalid port";
+void validPort(const string &port) {
+    int testPort = stoi(port);
+    if (testPort > 65535 || testPort < 0){
+         cerr << "Invalid port\n";
          exit(1);
     }
 }
